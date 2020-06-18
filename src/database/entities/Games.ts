@@ -13,10 +13,10 @@ class Game {
   id: ObjectID;
 
   @Column()
-  game: BigInteger;
+  game: number;
 
   @Column()
-  total_kills: BigInteger;
+  total_kills: number;
 
   @Column()
   players: JSON;

@@ -17,17 +17,20 @@ export default class ReadFile {
     }
   }
 
-  public async parseLines(lines: string[], regex: RegExp): Promise<ICommand[]> {
+  public async parseLines(
+    lines: string[],
+    regExp: RegExp,
+  ): Promise<ICommand[]> {
     try {
       const linesCommands: ICommand[] = [];
 
       lines.forEach(line => {
-        const lineMatch = line.match(regex);
+        const lineMatch = line.match(regExp);
         const command: ICommand = {
-          lineCommand: lineMatch != null ? lineMatch[1] : '',
+          lineCommand: lineMatch ? lineMatch[1] : '',
           lineValue: line,
         };
-        if (regex.test(line)) {
+        if (regExp.test(line)) {
           linesCommands.push(command);
         }
       });

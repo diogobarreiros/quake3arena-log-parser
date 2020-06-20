@@ -1,9 +1,10 @@
 import { Router } from 'express';
 
+import GameController from '../controllers/GameController';
+
+const gameController = new GameController();
 const routes = Router();
 
-routes.get('/', (request, response) =>
-  response.json({ message: 'Hello Quake 3 Arena!' }),
-);
+routes.get('/', gameController.create);
 
 export default routes;

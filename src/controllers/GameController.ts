@@ -1,21 +1,22 @@
+import { Request, Response } from 'express';
 import { container } from 'tsyringe';
 
 import CreateGameService from '../services/CreateGameService';
 import ReadFile from '../utils/ReadFile';
 
 export default class GameController {
-  public async create(): Promise<void> {
+  public async create(request: Request, response: Response): Promise<Response> {
     const createGame = container.resolve(CreateGameService);
 
     const readFile = new ReadFile();
     const lines = await readFile.readLogFile('src/logFile/games.log');
+    const commandPattern: string | undefined = process.env.COMMAND_PATTERN;
     const linesCommands = readFile.parseLines(
       lines,
-      new RegExp('^.{0,7}([a-z A-Z][^:]*)'),
+      new RegExp(commandPattern || ''),
     );
-    console.log(linesCommands);
 
-    await createGame.execute();
-    console.log('Server started on port 3333!');
+    await createGame.execute(linesCommands);
+    return response.status(204).json();
   }
 }

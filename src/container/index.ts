@@ -1,9 +1,9 @@
 import { container } from 'tsyringe';
 
-import IPlayersRepository from '../database/repositories/interfaces/IPlayersRepository';
-import PlayersRepository from '../database/repositories/PlayersRepository';
+import IGamesRepository from '../database/repositories/interfaces/IGamesRepository';
+import GamesRepository from '../database/repositories/GamesRepository';
 
-container.registerSingleton<IPlayersRepository>(
-  'PlayersRepository',
-  PlayersRepository,
+container.registerSingleton<IGamesRepository>(
+  'GamesRepository',
+  GamesRepository,
 );

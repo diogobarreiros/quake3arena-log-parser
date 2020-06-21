@@ -1,25 +1,31 @@
 import { injectable, inject } from 'tsyringe';
 
-import IPlayersRepository from '../database/repositories/interfaces/IPlayersRepository';
-import ICreatePlayerDTO from '../dtos/ICreatePlayerDTO';
+import IGamesRepository from '../database/repositories/interfaces/IGamesRepository';
 
 interface ICommand {
   lineCommand: string;
   lineValue: string;
 }
 
+interface Player {
+  game: number;
+  playerCode: number;
+  playerName: string;
+  kills: number;
+}
+
 @injectable()
 class CreateGameService {
   constructor(
-    @inject('PlayersRepository')
-    private playersRepository: IPlayersRepository,
+    @inject('GamesRepository')
+    private gamesRepository: IGamesRepository,
   ) {}
 
   public async execute(linesCommands: Promise<ICommand[]>): Promise<void> {
     try {
       this.clearDataBase();
       let game = 0;
-      const players: ICreatePlayerDTO[] = [];
+      const players: Player[] = [];
 
       (await linesCommands).forEach(lineCommand => {
         switch (lineCommand.lineCommand) {
@@ -28,28 +34,21 @@ class CreateGameService {
             break;
 
           case 'ClientUserinfoChanged': {
-            const commandPattern: string | undefined =
-              process.env.PLAYER_PATTERN;
-            const regExp = new RegExp(commandPattern || '');
-            const lineMatch = lineCommand.lineValue.match(regExp);
-            if (lineMatch) {
-              const player: ICreatePlayerDTO = {
-                game,
-                playerCode: parseInt(lineMatch[1], 10),
-                playerName: lineMatch[2],
-                kills: 0,
-              };
-              if (
-                !players.find(
-                  element =>
-                    element.game === player.game &&
-                    element.playerCode === player.playerCode,
-                )
-              ) {
-                players.push(player);
-                this.createParsePlayer(player);
-              }
+            const player = this.getPlayer(game, lineCommand.lineValue);
+            if (
+              player &&
+              !players.find(
+                element =>
+                  element.game === player.game &&
+                  element.playerCode === player.playerCode,
+              )
+            ) {
+              players.push(player);
             }
+            break;
+          }
+
+          case 'Kill': {
             break;
           }
 
@@ -62,12 +61,34 @@ class CreateGameService {
     }
   }
 
-  public async createParsePlayer(player: ICreatePlayerDTO): Promise<void> {
-    await this.playersRepository.create(player);
+  public getPlayer(game: number, lineValue: string): Player | undefined {
+    let player: Player | undefined;
+    const commandPattern: string | undefined = process.env.PLAYER_PATTERN;
+    const regExp = new RegExp(commandPattern || '');
+    const lineMatch = lineValue.match(regExp);
+    if (lineMatch) {
+      player = {
+        game,
+        playerCode: parseInt(lineMatch[1], 10),
+        playerName: lineMatch[2],
+        kills: 0,
+      };
+    }
+    return player;
+  }
+
+  public async createParseGame(): Promise<void> {
+    await this.gamesRepository.create({
+      game: 1,
+      total_kills: 1,
+      players: JSON,
+      kills: JSON,
+      log: JSON,
+    });
   }
 
   public async clearDataBase(): Promise<void> {
-    await this.playersRepository.clear();
+    await this.gamesRepository.clear();
   }
 }
 

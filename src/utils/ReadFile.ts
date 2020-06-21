@@ -6,7 +6,7 @@ interface ICommand {
 }
 
 export default class ReadFile {
-  public async readLogFile(logFile: string): Promise<string[]> {
+  public readLogFile(logFile: string): string[] {
     try {
       if (fs.existsSync(logFile)) {
         return fs.readFileSync(logFile).toString('utf8').split('\n');
@@ -17,10 +17,7 @@ export default class ReadFile {
     }
   }
 
-  public async parseLines(
-    lines: string[],
-    regExp: RegExp,
-  ): Promise<ICommand[]> {
+  public parseLines(lines: string[], regExp: RegExp): ICommand[] {
     try {
       const linesCommands: ICommand[] = [];
 

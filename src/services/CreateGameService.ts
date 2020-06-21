@@ -1,17 +1,26 @@
 import { injectable, inject } from 'tsyringe';
 
 import IGamesRepository from '../database/repositories/interfaces/IGamesRepository';
+import LogGame from '../utils/LogGame';
 
 interface ICommand {
   lineCommand: string;
   lineValue: string;
 }
 
-interface Player {
+interface IPlayer {
   game: number;
   playerCode: number;
   playerName: string;
   kills: number;
+}
+
+interface IKill {
+  game: number;
+  playerKill: string;
+  playerKilled: string;
+  mod: string;
+  log: string;
 }
 
 @injectable()
@@ -21,11 +30,12 @@ class CreateGameService {
     private gamesRepository: IGamesRepository,
   ) {}
 
-  public async execute(linesCommands: Promise<ICommand[]>): Promise<void> {
+  public async execute(linesCommands: ICommand[]): Promise<void> {
     try {
       this.clearDataBase();
       let game = 0;
-      const players: Player[] = [];
+      const players: IPlayer[] = [];
+      const kills: IKill[] = [];
 
       (await linesCommands).forEach(lineCommand => {
         switch (lineCommand.lineCommand) {
@@ -49,6 +59,19 @@ class CreateGameService {
           }
 
           case 'Kill': {
+            const kill = this.getKill(game, lineCommand.lineValue);
+            if (
+              kill &&
+              !kills.find(
+                element =>
+                  element.game === kill.game &&
+                  element.playerKill === kill.playerKill &&
+                  element.playerKilled === kill.playerKilled &&
+                  element.mod === kill.mod,
+              )
+            ) {
+              kills.push(kill);
+            }
             break;
           }
 
@@ -61,8 +84,8 @@ class CreateGameService {
     }
   }
 
-  public getPlayer(game: number, lineValue: string): Player | undefined {
-    let player: Player | undefined;
+  public getPlayer(game: number, lineValue: string): IPlayer | undefined {
+    let player: IPlayer | undefined;
     const commandPattern: string | undefined = process.env.PLAYER_PATTERN;
     const regExp = new RegExp(commandPattern || '');
     const lineMatch = lineValue.match(regExp);
@@ -75,6 +98,28 @@ class CreateGameService {
       };
     }
     return player;
+  }
+
+  public getKill(game: number, lineValue: string): IKill | undefined {
+    let kill: IKill | undefined;
+    const commandPattern: string | undefined = process.env.KILL_PATTERN;
+    const regExp = new RegExp(commandPattern || '');
+    const lineMatch = lineValue.match(regExp);
+
+    if (lineMatch) {
+      const logGame = new LogGame();
+      const playerKill = lineMatch[1];
+      const playerKilled = lineMatch[2];
+      const mod = lineMatch[3];
+      kill = {
+        game,
+        playerKill,
+        playerKilled,
+        mod,
+        log: logGame.treatLog(playerKill, playerKilled, mod),
+      };
+    }
+    return kill;
   }
 
   public async createParseGame(): Promise<void> {

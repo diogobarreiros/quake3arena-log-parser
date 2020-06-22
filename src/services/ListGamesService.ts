@@ -3,6 +3,7 @@ import { injectable, inject } from 'tsyringe';
 import IGamesRepository from '../database/repositories/interfaces/IGamesRepository';
 
 import Game from '../database/entities/Game';
+import AppError from '../errors/AppError';
 
 @injectable()
 class ListGamesService {
@@ -12,13 +13,13 @@ class ListGamesService {
   ) {}
 
   public async execute(): Promise<Game[]> {
-    try {
-      const games = this.gamesRepository.findAllGames();
+    const games = await this.gamesRepository.findAllGames();
 
-      return games;
-    } catch (err) {
-      throw new Error(err);
+    if (games.length < 1) {
+      throw new AppError('Games not found', 404);
     }
+
+    return games;
   }
 }
 

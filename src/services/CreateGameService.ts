@@ -42,66 +42,62 @@ class CreateGameService {
   ) {}
 
   public async execute(fileName: string): Promise<void> {
-    try {
-      if ((await this.gamesRepository.findAllGames()).length > 0)
-        this.clearDataBase();
+    if ((await this.gamesRepository.findAllGames()).length > 0)
+      this.clearDataBase();
 
-      const file = await this.storageLog.saveFile(fileName);
+    const file = await this.storageLog.saveFile(fileName);
 
-      const readFile = new ReadFile();
-      const lines = await readFile.readLogFile(
-        path.resolve(uploadConfig.uploadsFolder, file),
-      );
-      const commandPattern: string | undefined = process.env.COMMAND_PATTERN;
-      const linesCommands = readFile.parseLines(
-        lines,
-        new RegExp(commandPattern || ''),
-      );
+    const readFile = new ReadFile();
+    const lines = await readFile.readLogFile(
+      path.resolve(uploadConfig.uploadsFolder, file),
+    );
+    const commandPattern: string | undefined = process.env.COMMAND_PATTERN;
+    const linesCommands = readFile.parseLines(
+      lines,
+      new RegExp(commandPattern || ''),
+    );
 
-      const games: number[] = [];
-      let game = 0;
-      const players: IPlayer[] = [];
-      const kills: IKill[] = [];
+    const games: number[] = [];
+    let game = 0;
+    const players: IPlayer[] = [];
+    const kills: IKill[] = [];
 
-      (await linesCommands).forEach(lineCommand => {
-        switch (lineCommand.lineCommand) {
-          case 'InitGame':
-            game += 1;
-            games.push(game);
-            break;
+    (await linesCommands).forEach(lineCommand => {
+      switch (lineCommand.lineCommand) {
+        case 'InitGame':
+          game += 1;
+          games.push(game);
+          break;
 
-          case 'ClientUserinfoChanged': {
-            const player = this.getPlayer(game, lineCommand.lineValue);
-            if (
-              player &&
-              !players.find(
-                element =>
-                  element.game === player.game &&
-                  element.playerCode === player.playerCode,
-              )
-            ) {
-              players.push(player);
-            }
-            break;
+        case 'ClientUserinfoChanged': {
+          const player = this.getPlayer(game, lineCommand.lineValue);
+          if (
+            player &&
+            !players.find(
+              element =>
+                element.game === player.game &&
+                element.playerCode === player.playerCode,
+            )
+          ) {
+            players.push(player);
           }
-
-          case 'Kill': {
-            const kill = this.getKill(game, lineCommand.lineValue, players);
-            if (kill) {
-              kills.push(kill);
-            }
-            break;
-          }
-
-          default:
-            break;
+          break;
         }
-      });
 
-      this.createParseGame(players, kills, games);
-    } catch (err) {
-      throw new Error(err);
-    }
+        case 'Kill': {
+          const kill = this.getKill(game, lineCommand.lineValue, players);
+          if (kill) {
+            kills.push(kill);
+          }
+          break;
+        }
+
+        default:
+          break;
+      }
+    });
+
+    this.createParseGame(players, kills, games);
   }
 
   public getPlayer(game: number, lineValue: string): IPlayer | undefined {

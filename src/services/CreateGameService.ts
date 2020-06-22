@@ -43,6 +43,9 @@ class CreateGameService {
 
   public async execute(fileName: string): Promise<void> {
     try {
+      if ((await this.gamesRepository.findAllGames()).length > 0)
+        this.clearDataBase();
+
       const file = await this.storageLog.saveFile(fileName);
 
       const readFile = new ReadFile();
@@ -55,7 +58,6 @@ class CreateGameService {
         new RegExp(commandPattern || ''),
       );
 
-      this.clearDataBase();
       const games: number[] = [];
       let game = 0;
       const players: IPlayer[] = [];

@@ -16,6 +16,19 @@ class GamesRepository implements IGamesRepository {
     this.ormRepository = getMongoRepository(Game);
   }
 
+  public async findGame(game: number): Promise<Game | undefined> {
+    const oneGame = await this.ormRepository.findOne({
+      where: { game },
+    });
+
+    return oneGame;
+  }
+
+  public async findAllGames(): Promise<Game[]> {
+    const games = await this.ormRepository.find();
+    return games;
+  }
+
   public async insertMany(
     array: ICreateGameDTO[],
   ): Promise<InsertWriteOpResult> {

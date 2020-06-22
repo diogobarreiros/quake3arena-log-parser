@@ -24,6 +24,9 @@ class Game {
   @Column()
   kills: JSON;
 
+  @Column()
+  logs: JSON;
+
   @CreateDateColumn()
   created_at: Date;
 

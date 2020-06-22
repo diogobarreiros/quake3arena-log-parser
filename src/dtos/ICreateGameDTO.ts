@@ -3,4 +3,5 @@ export default interface ICreateGameDTO {
   total_kills: number;
   players: JSON;
   kills: JSON;
+  logs: JSON;
 }

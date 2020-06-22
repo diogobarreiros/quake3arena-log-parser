@@ -161,12 +161,43 @@ class CreateGameService {
     return kill;
   }
 
-  public getKillsGame(game: number, kills: IKill[]): IKill[] {
+  public getKills(game: number, kills: IKill[]): IKill[] {
     return kills.filter(element => element.game === game);
   }
 
-  public getPlayersGame(game: number, players: IPlayer[]): IPlayer[] {
-    return players.filter(element => element.game === game);
+  public getKillsGame(
+    game: number,
+    players: IPlayer[],
+  ): { playerName: string; kills: number }[] | undefined {
+    const killsGame: { playerName: string; kills: number }[] | undefined = [];
+    players.forEach(element => {
+      if (element.game === game) {
+        const { playerName, kills } = element;
+        const killGame = { playerName, kills };
+        killsGame.push(killGame);
+      }
+    });
+    return killsGame;
+  }
+
+  public getPlayersGame(
+    game: number,
+    players: IPlayer[],
+  ): string[] | undefined {
+    const namePlayers: string[] | undefined = [];
+    players.forEach(element => {
+      if (element.playerName && element.game === game)
+        namePlayers.push(element.playerName);
+    });
+    return namePlayers;
+  }
+
+  public getLogsGame(game: number, kills: IKill[]): string[] | undefined {
+    const logsGame: string[] | undefined = [];
+    kills.forEach(element => {
+      if (element.game === game) logsGame.push(element.log);
+    });
+    return logsGame;
   }
 
   public async createParseGame(
@@ -178,9 +209,10 @@ class CreateGameService {
     for (let game = 1; game <= games.length; game += 1) {
       const gameQuake: ICreateGameDTO = {
         game,
-        total_kills: this.getKillsGame(game, kills).length,
+        total_kills: this.getKills(game, kills).length,
         players: JSON.parse(JSON.stringify(this.getPlayersGame(game, players))),
-        kills: JSON.parse(JSON.stringify(this.getKillsGame(game, kills))),
+        kills: JSON.parse(JSON.stringify(this.getKillsGame(game, players))),
+        logs: JSON.parse(JSON.stringify(this.getLogsGame(game, kills))),
       };
       gamesQuake.push(gameQuake);
     }

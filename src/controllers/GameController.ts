@@ -5,12 +5,16 @@ import CreateGameService from '../services/CreateGameService';
 import ListGamesService from '../services/ListGamesService';
 import ShowGamesService from '../services/ShowGamesService';
 
+import Game from '../database/entities/Game';
+
 export default class GameController {
   public async create(request: Request, response: Response): Promise<Response> {
     const createGame = container.resolve(CreateGameService);
 
     await createGame.execute(request.file.filename);
-    return response.status(204).json();
+    return response.status(200).send({
+      message: 'Successfully imported file.',
+    });
   }
 
   public async index(request: Request, response: Response): Promise<Response> {
@@ -25,8 +29,21 @@ export default class GameController {
     const { game } = request.params;
     const listGames = container.resolve(ShowGamesService);
 
-    const games = await listGames.execute(game);
+    const oneGame: Game | undefined = await listGames.execute(game);
 
-    return response.json(games);
+    let result;
+
+    if (oneGame) {
+      result = {
+        [`game_${oneGame.game}`]: {
+          total_kills: oneGame.total_kills,
+          players: oneGame.players,
+          kills: oneGame.kills,
+          logs: oneGame.logs,
+        },
+      };
+    }
+
+    return response.status(200).send(result);
   }
 }

@@ -1,7 +1,15 @@
 import { injectable, inject } from 'tsyringe';
+import path from 'path';
 
+import ICreateGameDTO from '../dtos/ICreateGameDTO';
 import IGamesRepository from '../database/repositories/interfaces/IGamesRepository';
+
 import LogGame from '../utils/LogGame';
+import ReadFile from '../utils/ReadFile';
+
+import uploadConfig from '../config/upload';
+
+import IStorageLog from '../container/logs/StorageLog/models/IStorageLog';
 
 interface ICommand {
   lineCommand: string;
@@ -28,11 +36,27 @@ class CreateGameService {
   constructor(
     @inject('GamesRepository')
     private gamesRepository: IGamesRepository,
+
+    @inject('StorageLog')
+    private storageLog: IStorageLog,
   ) {}
 
-  public async execute(linesCommands: ICommand[]): Promise<void> {
+  public async execute(fileName: string): Promise<void> {
     try {
+      const file = await this.storageLog.saveFile(fileName);
+
+      const readFile = new ReadFile();
+      const lines = await readFile.readLogFile(
+        path.resolve(uploadConfig.uploadsFolder, file),
+      );
+      const commandPattern: string | undefined = process.env.COMMAND_PATTERN;
+      const linesCommands = readFile.parseLines(
+        lines,
+        new RegExp(commandPattern || ''),
+      );
+
       this.clearDataBase();
+      const games: number[] = [];
       let game = 0;
       const players: IPlayer[] = [];
       const kills: IKill[] = [];
@@ -41,6 +65,7 @@ class CreateGameService {
         switch (lineCommand.lineCommand) {
           case 'InitGame':
             game += 1;
+            games.push(game);
             break;
 
           case 'ClientUserinfoChanged': {
@@ -59,17 +84,8 @@ class CreateGameService {
           }
 
           case 'Kill': {
-            const kill = this.getKill(game, lineCommand.lineValue);
-            if (
-              kill &&
-              !kills.find(
-                element =>
-                  element.game === kill.game &&
-                  element.playerKill === kill.playerKill &&
-                  element.playerKilled === kill.playerKilled &&
-                  element.mod === kill.mod,
-              )
-            ) {
+            const kill = this.getKill(game, lineCommand.lineValue, players);
+            if (kill) {
               kills.push(kill);
             }
             break;
@@ -79,6 +95,8 @@ class CreateGameService {
             break;
         }
       });
+
+      this.createParseGame(players, kills, games);
     } catch (err) {
       throw new Error(err);
     }
@@ -100,7 +118,19 @@ class CreateGameService {
     return player;
   }
 
-  public getKill(game: number, lineValue: string): IKill | undefined {
+  public getPlayerName(
+    playerCode: number,
+    players: IPlayer[],
+  ): string | undefined {
+    return players.find(element => element.playerCode === playerCode)
+      ?.playerName;
+  }
+
+  public getKill(
+    game: number,
+    lineValue: string,
+    players: IPlayer[],
+  ): IKill | undefined {
     let kill: IKill | undefined;
     const commandPattern: string | undefined = process.env.KILL_PATTERN;
     const regExp = new RegExp(commandPattern || '');
@@ -108,8 +138,10 @@ class CreateGameService {
 
     if (lineMatch) {
       const logGame = new LogGame();
-      const playerKill = lineMatch[1];
-      const playerKilled = lineMatch[2];
+      const playerKill =
+        this.getPlayerName(parseInt(lineMatch[1], 10), players) || '<world>';
+      const playerKilled =
+        this.getPlayerName(parseInt(lineMatch[2], 10), players) || '<world>';
       const mod = lineMatch[3];
       kill = {
         game,
@@ -118,18 +150,43 @@ class CreateGameService {
         mod,
         log: logGame.treatLog(playerKill, playerKilled, mod),
       };
+      if (playerKill !== '<world>')
+        players.forEach(element => {
+          const player = element;
+          if (
+            player.game === game &&
+            player.playerCode === parseInt(lineMatch[2], 10)
+          )
+            player.kills += 1;
+        });
     }
     return kill;
   }
 
-  public async createParseGame(): Promise<void> {
-    await this.gamesRepository.create({
-      game: 1,
-      total_kills: 1,
-      players: JSON,
-      kills: JSON,
-      log: JSON,
-    });
+  public getKillsGame(game: number, kills: IKill[]): IKill[] {
+    return kills.filter(element => element.game === game);
+  }
+
+  public getPlayersGame(game: number, players: IPlayer[]): IPlayer[] {
+    return players.filter(element => element.game === game);
+  }
+
+  public async createParseGame(
+    players: IPlayer[],
+    kills: IKill[],
+    games: number[],
+  ): Promise<void> {
+    const gamesQuake: ICreateGameDTO[] = [];
+    for (let game = 1; game <= games.length; game += 1) {
+      const gameQuake: ICreateGameDTO = {
+        game,
+        total_kills: this.getKillsGame(game, kills).length,
+        players: JSON.parse(JSON.stringify(this.getPlayersGame(game, players))),
+        kills: JSON.parse(JSON.stringify(this.getKillsGame(game, kills))),
+      };
+      gamesQuake.push(gameQuake);
+    }
+    await this.gamesRepository.insertMany(gamesQuake);
   }
 
   public async clearDataBase(): Promise<void> {

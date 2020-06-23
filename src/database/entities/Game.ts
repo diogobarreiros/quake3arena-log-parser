@@ -1,11 +1,12 @@
 import {
-  ObjectID,
   Entity,
   Column,
   CreateDateColumn,
   UpdateDateColumn,
   ObjectIdColumn,
 } from 'typeorm';
+
+import { ObjectID } from 'mongodb';
 
 @Entity('games')
 class Game {

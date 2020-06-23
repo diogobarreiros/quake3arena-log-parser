@@ -11,6 +11,8 @@ import uploadConfig from '../config/upload';
 
 import IStorageLog from '../container/logs/StorageLog/models/IStorageLog';
 
+import AppError from '../errors/AppError';
+
 interface ICommand {
   lineCommand: string;
   lineValue: string;
@@ -216,7 +218,8 @@ class CreateGameService {
       };
       gamesQuake.push(gameQuake);
     }
-    await this.gamesRepository.insertMany(gamesQuake);
+    if ((await this.gamesRepository.insertMany(gamesQuake)) !== 1)
+      throw new AppError('File import error');
   }
 
   public async clearDataBase(): Promise<void> {

@@ -1,8 +1,4 @@
-import {
-  getMongoRepository,
-  MongoRepository,
-  InsertWriteOpResult,
-} from 'typeorm';
+import { getMongoRepository, MongoRepository } from 'typeorm';
 
 import ICreateGameDTO from '../../dtos/ICreateGameDTO';
 import IGamesRepository from './interfaces/IGamesRepository';
@@ -29,11 +25,9 @@ class GamesRepository implements IGamesRepository {
     return games;
   }
 
-  public async insertMany(
-    array: ICreateGameDTO[],
-  ): Promise<InsertWriteOpResult> {
+  public async insertMany(array: ICreateGameDTO[]): Promise<number> {
     const games = await this.ormRepository.insertMany(array);
-    return games;
+    return games.result.ok;
   }
 
   public async clear(): Promise<void> {
@@ -45,12 +39,14 @@ class GamesRepository implements IGamesRepository {
     total_kills,
     players,
     kills,
+    logs,
   }: ICreateGameDTO): Promise<Game> {
     const player = this.ormRepository.create({
       game,
       total_kills,
       players,
       kills,
+      logs,
     });
 
     await this.ormRepository.save(player);
